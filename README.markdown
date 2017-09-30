@@ -27,6 +27,66 @@ A gem providing "time travel" and "time freezing" capabilities, making it dead s
 
 ## USAGE
 
+### The difference between Timecop.freeze and Timecop.travel
+
+freeze is used to statically mock the concept of now. As your program executes,
+Time.now will not change unless you make subsequent calls into the Timecop API.
+travel, on the other hand, computes an offset between what we currently think
+Time.now is (recall that we support nested traveling) and the time passed in.
+It uses this offset to simulate the passage of time.  To demonstrate, consider
+the following code snippets:
+
+```ruby
+new_time = Time.local(2008, 9, 1, 12, 0, 0)
+Timecop.freeze(new_time)
+sleep(10)
+new_time == Time.now # ==> true
+
+Timecop.return # "turn off" Timecop
+Timecop.travel(new_time)
+sleep(10)
+new_time == Time.now # ==> false
+```
+
+
+### Timecop.scale
+
+Let's say you want to test a "live" integration wherein entire days could pass by
+in minutes while you're able to simulate "real" activity. For example, one such use case
+is being able to test reports and invoices that run in 30 day cycles in very little time, while also
+being able to simulate activity via subsequent calls to your application.
+
+```ruby
+# seconds will now seem like hours
+Timecop.scale(3600)
+Time.now
+# => 2012-09-20 21:23:25 -0500
+# seconds later, hours have passed and it's gone from 9pm at night to 6am in the morning
+Time.now
+# => 2012-09-21 06:22:59 -0500
+```
+
+See [#42](https://github.com/travisjeffery/timecop/pull/42) for more information, thanks to Ken Mayer, David Holcomb, and Pivotal Labs.
+
+### Timecop.safe_mode
+
+Safe mode forces you to use Timecop with the block syntax since it always puts time back the way it was. If you are running in safe mode and use Timecop without the block syntax `Timecop::SafeModeException` will be raised to tell the user they are not being safe.
+
+``` ruby
+# turn on safe mode
+Timecop.safe_mode = true
+
+# check if you are in safe mode
+Timecop.safe_mode?
+# => true
+
+# using method without block
+Timecop.freeze
+# => Timecop::SafeModeException: Safe mode is enabled, only calls passing a block are allowed.
+```
+
+### Testing Usage for Rails
+
 Run a time-sensitive test
 
 ```ruby
@@ -69,63 +129,6 @@ config.after_initialize do
   t = Time.local(2008, 9, 1, 10, 5, 0)
   Timecop.travel(t)
 end
-```
-
-### The difference between Timecop.freeze and Timecop.travel
-
-freeze is used to statically mock the concept of now. As your program executes,
-Time.now will not change unless you make subsequent calls into the Timecop API.
-travel, on the other hand, computes an offset between what we currently think
-Time.now is (recall that we support nested traveling) and the time passed in.
-It uses this offset to simulate the passage of time.  To demonstrate, consider
-the following code snippets:
-
-```ruby
-new_time = Time.local(2008, 9, 1, 12, 0, 0)
-Timecop.freeze(new_time)
-sleep(10)
-new_time == Time.now # ==> true
-
-Timecop.return # "turn off" Timecop
-Timecop.travel(new_time)
-sleep(10)
-new_time == Time.now # ==> false
-```
-
-### Timecop.scale
-
-Let's say you want to test a "live" integration wherein entire days could pass by
-in minutes while you're able to simulate "real" activity. For example, one such use case
-is being able to test reports and invoices that run in 30 day cycles in very little time, while also
-being able to simulate activity via subsequent calls to your application.
-
-```ruby
-# seconds will now seem like hours
-Timecop.scale(3600)
-Time.now
-# => 2012-09-20 21:23:25 -0500
-# seconds later, hours have passed and it's gone from 9pm at night to 6am in the morning
-Time.now
-# => 2012-09-21 06:22:59 -0500
-```
-
-See [#42](https://github.com/travisjeffery/timecop/pull/42) for more information, thanks to Ken Mayer, David Holcomb, and Pivotal Labs.
-
-### Timecop.safe_mode
-
-Safe mode forces you to use Timecop with the block syntax since it always puts time back the way it was. If you are running in safe mode and use Timecop without the block syntax `Timecop::SafeModeException` will be raised to tell the user they are not being safe.
-
-``` ruby
-# turn on safe mode
-Timecop.safe_mode = true
-
-# check if you are in safe mode
-Timecop.safe_mode?
-# => true
-
-# using method without block
-Timecop.freeze
-# => Timecop::SafeModeException: Safe mode is enabled, only calls passing a block are allowed.
 ```
 
 ### Rails v Ruby Date/Time libraries
